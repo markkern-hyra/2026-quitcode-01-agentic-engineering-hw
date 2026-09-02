@@ -27,15 +27,24 @@
       still separates from a dark board.
    ─────────────────────────────────────────────────────────────────────────── */
 :root {
-  /* board */
-  --chess-square-light: var(--p-color-canvas);
-  --chess-square-dark: var(--p-color-contrast-lower); /* decorative token — fine as a fill */
+  /* Board squares.
+
+     These are an explicit light-dark() pair rather than --p-* tokens, for the
+     same reason as the pieces below. PDS's contrast tokens are translucent
+     overlays over the canvas, so in dark mode --p-color-canvas resolves to
+     #010205 and a "light" square comes out pure black — leaving the black army
+     with nothing to contrast against and rendering it as hollow outlines.
+     A chess board needs both armies legible on both square colours in both
+     schemes, which means squares that stay mid-toned in the dark. */
+  --chess-square-light: light-dark(#f3f3f6, #6d6e78);
+  --chess-square-dark: light-dark(#c7c8cf, #43444d);
   --chess-board-radius: var(--p-radius-lg);
   --chess-board-max: 664px;
 
-  /* pieces */
-  --chess-piece-white: light-dark(#ffffff, hsl(240 12.5% 96.9%));
-  --chess-piece-black: light-dark(hsl(225 66.7% 8%), hsl(240 3.5% 14%));
+  /* Piece colour is semantic, not chrome: the white army stays light and the
+     black army dark in both schemes, so neither follows the palette's flip. */
+  --chess-piece-white: light-dark(#ffffff, #f4f4f7);
+  --chess-piece-black: light-dark(#15161b, #101117);
   --chess-piece-outline: var(--p-color-contrast-high);
 
   /* markers — contrast-high, never contrast-low/lower, for anything meaningful */

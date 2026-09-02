@@ -1,0 +1,26 @@
+.main {
+  display: grid;
+  gap: var(--p-spacing-fluid-md);
+  /* The board is the whole point; give it the width and centre it. */
+  justify-items: center;
+  align-content: start;
+  padding-block: var(--p-spacing-fluid-sm);
+}
+
+.boardColumn {
+  display: grid;
+  gap: var(--p-spacing-static-sm);
+  width: min(100%, var(--chess-board-max));
+}
+
+.sidebarSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-spacing-static-lg);
+}
+
+.headerEnd {
+  display: flex;
+  align-items: center;
+  gap: var(--p-spacing-static-sm);
+}

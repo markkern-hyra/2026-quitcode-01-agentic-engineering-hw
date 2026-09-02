@@ -1,0 +1,184 @@
+.frame {
+  position: relative;
+  width: min(100%, var(--chess-board-max));
+  aspect-ratio: 1;
+  border-radius: var(--chess-board-radius);
+  overflow: hidden;
+  background: var(--p-color-canvas);
+  box-shadow: var(--p-shadow-md);
+  /* Required for Pointer Events to own the gesture on touch instead of the
+     browser scrolling the page out from under a drag. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.grid {
+  display: grid;
+  grid-template-rows: repeat(8, 1fr);
+  height: 100%;
+}
+
+/* Real nested grids rather than display:contents — some engines have dropped
+   ARIA roles from contents elements, and two nested grids cost nothing. */
+.row {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+}
+
+.square {
+  all: unset;
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.square[data-shade='light'] {
+  background: var(--chess-square-light);
+}
+
+.square[data-shade='dark'] {
+  background: var(--chess-square-dark);
+}
+
+.square[data-locked] {
+  cursor: default;
+}
+
+/* ── wash layer: whose square is interesting right now ──────────────────── */
+.square::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--wash, transparent);
+  transition: background var(--p-duration-sm) var(--p-ease-out);
+  pointer-events: none;
+}
+
+/* Cascade order is the priority order; the last matching rule wins. */
+.square[data-last-move] {
+  --wash: var(--chess-wash-last);
+}
+.square[data-check] {
+  --wash: var(--chess-wash-check);
+}
+.square[data-selected] {
+  --wash: var(--chess-wash-selected);
+}
+
+/* ── marker layer: where this piece may go ──────────────────────────────── */
+.square::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  transition:
+    transform var(--p-duration-sm) var(--p-ease-out),
+    opacity var(--p-duration-sm) var(--p-ease-out);
+}
+
+.square[data-target='move']::after {
+  inset: 0;
+  margin: auto;
+  width: 26%;
+  height: 26%;
+  border-radius: var(--p-radius-full);
+  background: var(--chess-marker);
+  opacity: 0.34;
+}
+
+.square[data-target='capture']::after {
+  inset: 5%;
+  border-radius: var(--p-radius-full);
+  box-shadow: inset 0 0 0 0.26rem var(--chess-marker);
+  opacity: 0.42;
+}
+
+.square[data-hover]::after {
+  transform: scale(1.22);
+  opacity: 0.62;
+}
+
+.square:focus-visible {
+  outline: 2px solid var(--p-color-focus);
+  /* Inset, so the ring is not clipped by the frame's overflow: hidden. */
+  outline-offset: -3px;
+  z-index: 2;
+}
+
+/* ── coordinates ────────────────────────────────────────────────────────── */
+/* contrast-medium, not contrast-low/lower: those are documented as decorative
+   only and are not accessibility-compliant for text. */
+.coord {
+  position: absolute;
+  color: var(--p-color-contrast-medium);
+  font-size: clamp(0.5rem, 1.4cqi, var(--p-typescale-2xs));
+  font-weight: var(--p-font-weight-semibold);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.coordFile {
+  right: 7%;
+  bottom: 5%;
+}
+
+.coordRank {
+  left: 7%;
+  top: 5%;
+}
+
+/* ── piece layer ────────────────────────────────────────────────────────── */
+.pieceLayer {
+  position: absolute;
+  inset: 0;
+  /* Every interaction belongs to the buttons underneath. */
+  pointer-events: none;
+}
+
+.sprite {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 12.5%;
+  height: 12.5%;
+  /* The sprite is exactly one square wide, so translate(100%) is "one file". */
+  transform: translate(calc(var(--sq-x) * 100%), calc(var(--sq-y) * 100%));
+  transition:
+    transform var(--chess-slide-duration) var(--chess-slide-ease),
+    opacity var(--chess-slide-duration) var(--p-ease-out);
+  will-change: transform;
+}
+
+.sprite[data-color='w'] {
+  color: var(--chess-piece-white);
+  --chess-stroke: var(--chess-piece-outline);
+  --chess-detail: var(--chess-piece-outline);
+}
+
+.sprite[data-color='b'] {
+  color: var(--chess-piece-black);
+  --chess-stroke: var(--chess-piece-outline);
+  --chess-detail: var(--chess-piece-white);
+}
+
+.sprite[data-dragging] {
+  opacity: 0.24;
+  transition: opacity var(--p-duration-sm) var(--p-ease-out);
+}
+
+.sprite[data-fading] {
+  opacity: 0;
+}
+
+/* ── drag ghost ─────────────────────────────────────────────────────────── */
+.ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.35));
+  will-change: transform;
+}

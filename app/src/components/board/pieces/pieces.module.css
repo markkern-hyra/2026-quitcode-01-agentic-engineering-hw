@@ -1,0 +1,29 @@
+.glyph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Body paints with currentColor, outlines and details with --chess-stroke.
+     The two are set by whatever renders the glyph, so six shapes cover both
+     armies rather than twelve. */
+  fill: currentColor;
+  stroke: var(--chess-stroke);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.22));
+}
+
+/* Bishop's mitre slit, knight's eye and nostril. These sit INSIDE the piece,
+   so they take --chess-detail, which contrasts with the fill, rather than
+   --chess-stroke, which outlines against the square. On a black piece a dark
+   detail line would be invisible. */
+.glyph .detail {
+  fill: none;
+  stroke: var(--chess-detail);
+  stroke-width: 1.5;
+}
+
+.glyph circle.detail {
+  fill: var(--chess-detail);
+  stroke: none;
+}
