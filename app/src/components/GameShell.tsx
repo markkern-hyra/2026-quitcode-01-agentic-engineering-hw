@@ -129,14 +129,12 @@ export function GameShell() {
             captured={state.orientation === 'w' ? snapshot.captured.w : snapshot.captured.b}
             materialDelta={snapshot.materialDelta}
           />
+          {/* Below the board rather than in PCanvas's `footer` slot: that slot
+              lays its content out at zero height, and the result belongs next
+              to the board the player is already looking at. */}
+          {gameOver && <GameOverBanner status={snapshot.status} onNewGame={handleNewGame} />}
         </div>
       </div>
-
-      {gameOver && (
-        <div slot="footer">
-          <GameOverBanner status={snapshot.status} onNewGame={handleNewGame} />
-        </div>
-      )}
 
       <PromotionDialog
         open={state.pendingPromotion !== null}
