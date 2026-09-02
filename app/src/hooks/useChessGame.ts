@@ -88,7 +88,11 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         legalTargets: NO_TARGETS,
       };
     case 'setFocus':
-      return { ...state, focusSquare: action.square };
+      // Identity-stable when nothing changed: the board re-syncs focus on every
+      // focusin, and a fresh object each time would re-render for nothing.
+      return state.focusSquare === action.square
+        ? state
+        : { ...state, focusSquare: action.square };
     case 'setOrientation':
       return { ...state, orientation: action.color };
     case 'setMode':

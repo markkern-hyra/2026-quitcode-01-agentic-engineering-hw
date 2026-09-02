@@ -17,6 +17,7 @@ export type SquareProps = {
   rankLabel: string | null;
   onActivate: (square: SquareName) => void;
   onPointerDown: (event: React.PointerEvent<HTMLButtonElement>, square: SquareName) => void;
+  onFocusSquare: (square: SquareName) => void;
 };
 
 /**
@@ -42,6 +43,7 @@ export const Square = memo(function Square({
   rankLabel,
   onActivate,
   onPointerDown,
+  onFocusSquare,
 }: SquareProps) {
   return (
     <button
@@ -61,6 +63,10 @@ export const Square = memo(function Square({
       className={styles.square}
       onClick={() => onActivate(square)}
       onPointerDown={(event) => onPointerDown(event, square)}
+      /* Focus can arrive without a click — Tab, a screen reader's own
+         navigation, or scripted focus. The roving anchor has to follow it, or
+         the next arrow key steps from a square the user has already left. */
+      onFocus={() => onFocusSquare(square)}
     >
       {fileLabel !== null && (
         <span className={`${styles.coord} ${styles.coordFile}`} aria-hidden="true">

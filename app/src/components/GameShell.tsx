@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { PCanvas, PDivider, PHeading } from '@porsche-design-system/components-react/ssr';
 import { breakpointM } from '@porsche-design-system/components-react/styles';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useChessGame } from '@/hooks/useChessGame';
 import { useEngine } from '@/hooks/useEngine';
 import { useBotDriver } from '@/hooks/useBotDriver';
@@ -44,17 +45,14 @@ export function GameShell() {
     requestMove,
   });
 
-  // Open on a desktop-sized viewport, closed on small screens where PCanvas
-  // turns them into flyouts over the board. Resolved after mount so the server
-  // and the first client render agree.
-  const [sidebarStartOpen, setSidebarStartOpen] = useState(false);
-  const [sidebarEndOpen, setSidebarEndOpen] = useState(false);
-  useEffect(() => {
-    if (window.matchMedia(`(min-width: ${breakpointM}px)`).matches) {
-      setSidebarStartOpen(true);
-      setSidebarEndOpen(true);
-    }
-  }, []);
+  // Sidebars follow the viewport until the player says otherwise: `null` means
+  // "track the media query", a boolean means they have chosen. On small screens
+  // PCanvas turns them into flyouts over the board.
+  const isDesktop = useMediaQuery(`(min-width: ${breakpointM}px)`);
+  const [startOverride, setStartOverride] = useState<boolean | null>(null);
+  const [endOverride, setEndOverride] = useState<boolean | null>(null);
+  const sidebarStartOpen = startOverride ?? isDesktop;
+  const sidebarEndOpen = endOverride ?? isDesktop;
 
   const handleNewGame = useCallback(() => {
     reset();
@@ -75,8 +73,8 @@ export function GameShell() {
     <PCanvas
       sidebarStartOpen={sidebarStartOpen}
       sidebarEndOpen={sidebarEndOpen}
-      onSidebarStartUpdate={(event) => setSidebarStartOpen(event.detail.open)}
-      onSidebarEndDismiss={() => setSidebarEndOpen(false)}
+      onSidebarStartUpdate={(event) => setStartOverride(event.detail.open)}
+      onSidebarEndDismiss={() => setEndOverride(false)}
     >
       <span slot="title">Porsche Chess</span>
 

@@ -99,6 +99,7 @@ export const Board = memo(function Board({ state, actions, locked }: BoardProps)
                   rankLabel={showCoordinates && isFirstCol ? square[1] : null}
                   onActivate={handleActivate}
                   onPointerDown={onPointerDown}
+                  onFocusSquare={actions.moveFocus}
                 />
               );
             })}

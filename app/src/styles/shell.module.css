@@ -1,9 +1,12 @@
 .main {
   display: grid;
   gap: var(--p-spacing-fluid-md);
-  /* The board is the whole point; give it the width and centre it. */
+  /* The board is the whole point: centre it in whatever room the shell leaves.
+     `safe` keeps the top edge reachable when the content is taller than the
+     viewport, which centring alone would clip. */
   justify-items: center;
-  align-content: start;
+  align-content: safe center;
+  min-height: 100%;
   padding-block: var(--p-spacing-fluid-sm);
 }
 
