@@ -1,0 +1,73 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   1. Porsche Design System global styles — MANDATORY in v4.
+      Ships the html/body reset, the Porsche Next @font-face rules, every --p-*
+      custom property (all built on light-dark()) and the .scheme-* utilities.
+      Components render with the wrong colours and fonts without this import.
+   ─────────────────────────────────────────────────────────────────────────── */
+@import '@porsche-design-system/components-react/index.css';
+
+/* ───────────────────────────────────────────────────────────────────────────
+   2. Replaces the getInitialStyles() partial, which v4 removed. Keeps custom
+      elements invisible until they upgrade, while letting the server-rendered
+      (Declarative Shadow DOM) ones paint immediately. Not shipped in index.css.
+   ─────────────────────────────────────────────────────────────────────────── */
+:not(:defined, [data-ssr]) {
+  visibility: hidden;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   3. App-owned tokens layered on top of PDS. We never redefine a --p-* variable
+      — that is a documented anti-pattern; scheme islands are the supported way.
+
+      Why the piece colours are not plain --p-* tokens: the PDS monochrome
+      palette inverts with the scheme (--p-color-primary is near-black in light
+      and near-white in dark). Piece colour is semantic, not chrome — the white
+      army must stay light and the black army dark in BOTH schemes — so these
+      get their own light-dark() pairs, lifted in dark mode so the black army
+      still separates from a dark board.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* board */
+  --chess-square-light: var(--p-color-canvas);
+  --chess-square-dark: var(--p-color-contrast-lower); /* decorative token — fine as a fill */
+  --chess-board-radius: var(--p-radius-lg);
+  --chess-board-max: 664px;
+
+  /* pieces */
+  --chess-piece-white: light-dark(#ffffff, hsl(240 12.5% 96.9%));
+  --chess-piece-black: light-dark(hsl(225 66.7% 8%), hsl(240 3.5% 14%));
+  --chess-piece-outline: var(--p-color-contrast-high);
+
+  /* markers — contrast-high, never contrast-low/lower, for anything meaningful */
+  --chess-marker: var(--p-color-contrast-high);
+  --chess-wash-last: var(--p-color-info-low);
+  --chess-wash-selected: var(--p-color-info-medium);
+  --chess-wash-check: var(--p-color-error-low);
+
+  /* motion */
+  --chess-slide-duration: var(--p-duration-md);
+  --chess-slide-ease: var(--p-ease-in-out);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--p-color-canvas);
+  color: var(--p-color-primary);
+}
+
+/* Honour prefers-reduced-motion globally: kills the piece slide and PDS's own
+   transitions in one rule, so no component needs a JS media-query hook. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
