@@ -19,4 +19,4 @@
 :HL["https://cdn.ui.porsche.com/porsche-design-system/components/porsche-design-system.divider.9ce4660783cb9bf1e0fd.js","script"]
 :HL["https://cdn.ui.porsche.com/porsche-design-system/components/porsche-design-system.scroller.a7b4a03d7c0dd2e84221.js","script"]
 :HL["https://cdn.ui.porsche.com/porsche-design-system/components/porsche-design-system.toast.d9c69c0cb446447b2c5a.js","script"]
-0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"/_not-found","param":null,"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}},"staleTime":300,"buildId":"ClHNCQtrc7lABfjAk4kJ_"}
+0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"/_not-found","param":null,"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}},"staleTime":300,"buildId":"JswkbBaR8xPJuro8uH9r8"}
