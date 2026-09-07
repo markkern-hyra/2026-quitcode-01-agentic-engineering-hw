@@ -8,7 +8,7 @@ import {
   PSegmentedControlItem,
   PSwitch,
 } from '@porsche-design-system/components-react/ssr';
-import type { GameMode } from '@/lib/types';
+import type { BoardView, GameMode } from '@/lib/types';
 import { DIFFICULTY_LABEL, type Difficulty } from '@/engine/protocol';
 import styles from '@/styles/panels.module.css';
 
@@ -18,10 +18,12 @@ export type SettingsPanelProps = {
   botColor: Color;
   showCoordinates: boolean;
   showLegalMoves: boolean;
+  view: BoardView;
   onMode: (mode: GameMode) => void;
   onDifficulty: (difficulty: Difficulty) => void;
   onBotColor: (color: Color) => void;
   onOption: (key: 'showCoordinates' | 'showLegalMoves', value: boolean) => void;
+  onView: (view: BoardView) => void;
 };
 
 export function SettingsPanel({
@@ -30,10 +32,12 @@ export function SettingsPanel({
   botColor,
   showCoordinates,
   showLegalMoves,
+  view,
   onMode,
   onDifficulty,
   onBotColor,
   onOption,
+  onView,
 }: SettingsPanelProps) {
   return (
     <div className={styles.settings}>
@@ -78,6 +82,16 @@ export function SettingsPanel({
       <PHeading tag="h2" size="small">
         Board
       </PHeading>
+
+      <PSegmentedControl
+        value={view}
+        label="Perspective"
+        onChange={(event) => onView(event.detail.value as BoardView)}
+      >
+        <PSegmentedControlItem value="3d">3D</PSegmentedControlItem>
+        <PSegmentedControlItem value="flat">Flat</PSegmentedControlItem>
+      </PSegmentedControl>
+
       <PSwitch
         checked={showLegalMoves}
         onUpdate={(event) => onOption('showLegalMoves', event.detail.checked)}

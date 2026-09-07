@@ -40,6 +40,9 @@
   --chess-square-dark: light-dark(#c7c8cf, #43444d);
   --chess-board-radius: var(--p-radius-lg);
   --chess-board-max: 664px;
+  /* The board's edge, visible only in 3D mode where the plate is pushed below
+     the playing surface. Darker than either square so the board reads solid. */
+  --chess-board-edge: light-dark(#9a9ba4, #26272e);
 
   /* Piece colour is semantic, not chrome: the white army stays light and the
      black army dark in both schemes, so neither follows the palette's flip. */

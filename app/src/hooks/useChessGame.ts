@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { Chess, type Color, type Move, type PieceSymbol, type Square } from 'chess.js';
 import type {
+  BoardView,
   GameMode,
   GameSnapshot,
   Interaction,
@@ -28,6 +29,7 @@ export type GameState = {
   announcement: string;
   showCoordinates: boolean;
   showLegalMoves: boolean;
+  view: BoardView;
 };
 
 type GameAction =
@@ -43,7 +45,8 @@ type GameAction =
   | { type: 'setMode'; mode: GameMode }
   | { type: 'setDifficulty'; difficulty: Difficulty }
   | { type: 'setBotColor'; color: Color }
-  | { type: 'setOption'; key: 'showCoordinates' | 'showLegalMoves'; value: boolean };
+  | { type: 'setOption'; key: 'showCoordinates' | 'showLegalMoves'; value: boolean }
+  | { type: 'setView'; view: BoardView };
 
 const NO_TARGETS: LegalTargets = {};
 
@@ -103,6 +106,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, botColor: action.color };
     case 'setOption':
       return { ...state, [action.key]: action.value };
+    case 'setView':
+      return { ...state, view: action.view };
   }
 }
 
@@ -155,6 +160,7 @@ function initialState(): GameState {
     announcement: '',
     showCoordinates: true,
     showLegalMoves: true,
+    view: '3d',
   };
 }
 
@@ -171,7 +177,12 @@ export type GameActions = {
   /** Single entry point for click, tap and Enter/Space. */
   activateSquare: (square: Square) => void;
   beginDrag: (square: Square, pointerId: number) => void;
-  dropOn: (square: Square | null) => void;
+  /**
+   * Takes the origin explicitly rather than reading it back out of state: the
+   * pointer hook already knows where the drag started, and pointerup can arrive
+   * before the dragStart render has been committed.
+   */
+  dropOn: (from: Square, to: Square | null) => void;
   cancelDrag: () => void;
   choosePromotion: (piece: PromotionPiece) => void;
   cancelPromotion: () => void;
@@ -184,6 +195,7 @@ export type GameActions = {
   setDifficulty: (difficulty: Difficulty) => void;
   setBotColor: (color: Color) => void;
   setOption: (key: 'showCoordinates' | 'showLegalMoves', value: boolean) => void;
+  setView: (view: BoardView) => void;
 };
 
 export function useChessGame(): { state: GameState; actions: GameActions } {
@@ -292,21 +304,35 @@ export function useChessGame(): { state: GameState; actions: GameActions } {
   const actions = useMemo<GameActions>(
     () => ({
       activateSquare,
-      beginDrag: (square, pointerId) => dispatch({ type: 'dragStart', square, pointerId }),
+      beginDrag: (square, pointerId) => {
+        // A drag never fires a click, so the selection that click-to-move
+        // relies on has to happen here too. Without it nothing ever computes
+        // the legal targets — which both hides the move dots during a drag and
+        // made every drop get rejected as illegal.
+        dispatch({ type: 'select', square, targets: buildLegalTargets(getCore().chess, square) });
+        dispatch({ type: 'dragStart', square, pointerId });
+      },
       cancelDrag: () => dispatch({ type: 'dragEnd' }),
-      dropOn: (square) => {
-        const { interaction, legalTargets } = latest.current;
-        if (interaction.kind !== 'dragging') return;
-        const from = interaction.from;
-        if (square === null || square === from || !legalTargets[square]) {
+      dropOn: (from, to) => {
+        if (to === null || to === from) {
           dispatch({ type: 'dragEnd' });
           return;
         }
-        if (needsPromotion(from, square)) {
+        // Ask the board, not the rendered state. `legalTargets` is only correct
+        // once the dragStart render has committed, and a fast drag can release
+        // before that happens.
+        const legal = getCore()
+          .chess.moves({ square: from, verbose: true })
+          .some((move) => move.to === to);
+        if (!legal) {
           dispatch({ type: 'dragEnd' });
-          dispatch({ type: 'promotionRequest', from, to: square });
+          return;
+        }
+        if (needsPromotion(from, to)) {
+          dispatch({ type: 'dragEnd' });
+          dispatch({ type: 'promotionRequest', from, to });
         } else {
-          commit(from, square);
+          commit(from, to);
         }
       },
       choosePromotion: (piece) => {
@@ -382,6 +408,7 @@ export function useChessGame(): { state: GameState; actions: GameActions } {
       setDifficulty: (difficulty) => dispatch({ type: 'setDifficulty', difficulty }),
       setBotColor: (color) => dispatch({ type: 'setBotColor', color }),
       setOption: (key, value) => dispatch({ type: 'setOption', key, value }),
+      setView: (view) => dispatch({ type: 'setView', view }),
     }),
     [getCore, activateSquare, commit, needsPromotion],
   );

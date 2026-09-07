@@ -103,7 +103,7 @@ export function useBoardPointer(
       // Released without ever crossing the threshold: it was a click, and the
       // button's own onClick has already selected the square.
       if (!start?.dragging) return;
-      actions.dropOn(squareAtPoint(event.clientX, event.clientY));
+      actions.dropOn(start.square, squareAtPoint(event.clientX, event.clientY));
     };
 
     const handleCancel = () => {

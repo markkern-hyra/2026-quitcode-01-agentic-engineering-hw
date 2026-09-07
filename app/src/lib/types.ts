@@ -52,4 +52,6 @@ export type Interaction =
   | { kind: 'dragging'; from: Square; pointerId: number };
 
 export type GameMode = 'local' | 'vs-bot';
+/** How the board is drawn. '3d' tilts it in CSS 3D; 'flat' is the same DOM at tilt 0. */
+export type BoardView = '3d' | 'flat';
 export type PromotionPiece = 'q' | 'r' | 'b' | 'n';

@@ -93,10 +93,12 @@ export function GameShell() {
           botColor={state.botColor}
           showCoordinates={state.showCoordinates}
           showLegalMoves={state.showLegalMoves}
+          view={state.view}
           onMode={actions.setMode}
           onDifficulty={actions.setDifficulty}
           onBotColor={actions.setBotColor}
           onOption={actions.setOption}
+          onView={actions.setView}
         />
         <PDivider color="contrast-low" />
         <GameControls

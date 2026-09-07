@@ -1,11 +1,24 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   The 3D board is CSS transforms over exactly the same DOM as the flat one:
+   `.stage` tilts everything into a plane, and each piece counter-rotates by the
+   same angle so it stands back up facing the camera. Nothing about the 64
+   buttons, their ARIA, the roving tabindex or hit-testing changes — the browser
+   hit-tests transformed elements correctly, so `elementFromPoint` still works.
+
+   `--board-tilt` is 0deg in flat mode, which collapses every 3D rule below into
+   the original 2D board without a second code path.
+   ───────────────────────────────────────────────────────────────────────────── */
+
 .frame {
   position: relative;
   width: min(100%, var(--chess-board-max));
-  aspect-ratio: 1;
-  border-radius: var(--chess-board-radius);
-  overflow: hidden;
-  background: var(--p-color-canvas);
-  box-shadow: var(--p-shadow-md);
+  /* Taller than wide: tilting foreshortens the board vertically, and standing
+     pieces need headroom above the back rank. */
+  aspect-ratio: 1 / 0.98;
+  /* No `overflow: hidden` — it would flatten the 3D context and decapitate the
+     pieces. The board's own rounding lives on .grid instead. */
+  perspective: var(--chess-perspective, 3200px);
+  perspective-origin: 50% 40%;
   /* Required for Pointer Events to own the gesture on touch instead of the
      browser scrolling the page out from under a drag. */
   touch-action: none;
@@ -13,10 +26,83 @@
   -webkit-user-select: none;
 }
 
+/*
+ * Flat mode is not a separate code path — it is this same board with the tilt
+ * and every 3D quantity set to zero. Every rule below is written so that a tilt
+ * of 0deg collapses it back to the original 2D board exactly.
+ */
+.frame[data-view='flat'] {
+  --board-tilt: 0deg;
+  --chess-board-depth: 0px;
+  --chess-piece-height: 100%;
+  --chess-piece-spread: 0%;
+  --chess-contact-opacity: 0;
+  --chess-select-lift: 0px;
+  --chess-board-scale: 1;
+  aspect-ratio: 1;
+}
+
+.frame[data-view='3d'] {
+  /* 34deg, not the ~45 that looks best in a still: the steeper the tilt, the
+     more each rank hides the rank behind it, and a board you cannot read is
+     not worth the drama. This is the angle where pieces still stand up
+     convincingly but every occupied square stays legible. */
+  --board-tilt: 34deg;
+  --chess-board-depth: 20px;
+  /* Taller than a square: perspective foreshortens the upright piece, so it has
+     to overshoot to read as the right height once tilted. Kept modest so the
+     back ranks stay readable instead of being buried behind their own pieces. */
+  --chess-piece-height: 130%;
+  --chess-piece-spread: 6%;
+  --chess-contact-opacity: 1;
+  --chess-select-lift: 22px;
+  --chess-board-scale: 0.93;
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+  /* Flex, not `grid` + `place-content: center`: that sizes the grid area to its
+     content, so .stageInner's `width: 100%` resolved circularly and the whole
+     board collapsed to zero. A flex container's content box is definite. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+  /* Perspective scales the near edge up, so the tilted board is WIDER than its
+     own box at the bottom. Scale it back to fit rather than let the a- and
+     h-files spill out of the column. */
+  transform: scale(var(--chess-board-scale, 1)) rotateX(var(--board-tilt, 0deg));
+  transition: transform var(--p-duration-md) var(--p-ease-in-out);
+}
+
+.stageInner {
+  position: relative;
+  width: 100%;
+  max-width: var(--chess-board-max);
+  aspect-ratio: 1;
+  transform-style: preserve-3d;
+}
+
+/* The board's edge: a plate pushed below the playing surface so the tilted
+   board reads as a solid object rather than a decal. */
+.stageInner::before {
+  content: '';
+  position: absolute;
+  inset: -0.6%;
+  border-radius: var(--chess-board-radius);
+  background: var(--chess-board-edge);
+  transform: translateZ(calc(-1 * var(--chess-board-depth, 0px)));
+  box-shadow: var(--p-shadow-lg);
+}
+
 .grid {
   display: grid;
   grid-template-rows: repeat(8, 1fr);
   height: 100%;
+  border-radius: var(--chess-board-radius);
+  overflow: hidden;
+  background: var(--p-color-canvas);
 }
 
 /* Real nested grids rather than display:contents — some engines have dropped
@@ -68,6 +154,22 @@
   --wash: var(--chess-wash-selected);
 }
 
+/* The king in check pulses, so check is never conveyed by a static colour
+   alone — and it draws the eye to the one square that matters. */
+.square[data-check]::before {
+  animation: checkPulse 1.4s var(--p-ease-in-out) infinite;
+}
+
+@keyframes checkPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 /* ── marker layer: where this piece may go ──────────────────────────────── */
 .square::after {
   content: '';
@@ -102,7 +204,6 @@
 
 .square:focus-visible {
   outline: 2px solid var(--p-color-focus);
-  /* Inset, so the ring is not clipped by the frame's overflow: hidden. */
   outline-offset: -3px;
   z-index: 2;
 }
@@ -133,22 +234,72 @@
 .pieceLayer {
   position: absolute;
   inset: 0;
+  transform-style: preserve-3d;
   /* Every interaction belongs to the buttons underneath. */
   pointer-events: none;
 }
 
+/*
+ * Three nested transforms, each owning exactly one job, so they compose without
+ * fighting each other:
+ *   .sprite  — WHERE on the board (transition: the slide between squares)
+ *   .lift    — the arc over the board (Web Animations, retriggered per move)
+ *   .stand   — standing the piece up out of the board plane (static per tilt)
+ */
 .sprite {
   position: absolute;
   top: 0;
   left: 0;
   width: 12.5%;
   height: 12.5%;
+  transform-style: preserve-3d;
   /* The sprite is exactly one square wide, so translate(100%) is "one file". */
-  transform: translate(calc(var(--sq-x) * 100%), calc(var(--sq-y) * 100%));
+  transform: translate3d(calc(var(--sq-x) * 100%), calc(var(--sq-y) * 100%), 0);
   transition:
     transform var(--chess-slide-duration) var(--chess-slide-ease),
     opacity var(--chess-slide-duration) var(--p-ease-out);
   will-change: transform;
+}
+
+.lift {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.stand {
+  position: absolute;
+  left: calc(-1 * var(--chess-piece-spread, 0%));
+  right: calc(-1 * var(--chess-piece-spread, 0%));
+  /* Anchored just inside the square's bottom edge, so the piece appears to
+     stand ON the square rather than float over its centre. */
+  bottom: 4%;
+  height: var(--chess-piece-height, 100%);
+  transform-origin: bottom center;
+  /* Counter-rotate by the board's own tilt: the piece ends up perpendicular to
+     the board and square-on to the camera. At tilt 0 this is the identity. */
+  transform: rotateX(calc(-1 * var(--board-tilt, 0deg)));
+  transition: transform var(--p-duration-md) var(--p-ease-in-out);
+}
+
+/* Contact shadow. It stays in the board plane (it is NOT inside .stand), which
+   is what sells the piece as standing on the surface. */
+.contact {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 2%;
+  height: 26%;
+  border-radius: var(--p-radius-full);
+  background: radial-gradient(
+    ellipse at center,
+    rgb(0 0 0 / 0.42) 0%,
+    rgb(0 0 0 / 0.16) 55%,
+    transparent 72%
+  );
+  opacity: var(--chess-contact-opacity, 0);
+  transition: opacity var(--p-duration-sm) var(--p-ease-out);
+  pointer-events: none;
 }
 
 .sprite[data-color='w'] {
@@ -163,12 +314,31 @@
   --chess-detail: var(--chess-piece-white);
 }
 
+/* The selected piece rises off the board — deliberate, and steadier than a
+   hover lift, which would fight the drag gesture. */
+.sprite[data-selected] .stand {
+  transform: translateZ(var(--chess-select-lift, 0px))
+    rotateX(calc(-1 * var(--board-tilt, 0deg)));
+}
+
 .sprite[data-dragging] {
   opacity: 0.24;
   transition: opacity var(--p-duration-sm) var(--p-ease-out);
 }
 
+/* Captured pieces topple backwards onto the board instead of blinking out. */
 .sprite[data-fading] {
+  opacity: 0;
+}
+
+.sprite[data-fading] .stand {
+  transform: rotateX(calc(-1 * var(--board-tilt, 0deg) + 82deg)) scale(0.92);
+  transition:
+    transform var(--chess-slide-duration) var(--p-ease-in),
+    opacity var(--chess-slide-duration) var(--p-ease-in);
+}
+
+.sprite[data-fading] .contact {
   opacity: 0;
 }
 
@@ -179,6 +349,15 @@
   left: 0;
   z-index: 5;
   pointer-events: none;
-  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.35));
+  filter: drop-shadow(0 10px 14px rgb(0 0 0 / 0.4));
   will-change: transform;
+}
+
+/* Reduced motion: keep every position and tilt, drop every repeating and
+   decorative animation. The board still reads as 3D, it just stops moving. */
+@media (prefers-reduced-motion: reduce) {
+  .square[data-check]::before {
+    animation: none;
+    opacity: 1;
+  }
 }

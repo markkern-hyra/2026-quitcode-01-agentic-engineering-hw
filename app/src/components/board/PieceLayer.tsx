@@ -11,6 +11,9 @@ export type PieceLayerProps = {
   pieces: readonly PieceOnBoard[];
   orientation: Color;
   draggingId: string | null;
+  selectedId: string | null;
+  /** False under prefers-reduced-motion: pieces still move, they just cut. */
+  animate: boolean;
 };
 
 const FADE_MS = 400; // matches --p-duration-md
@@ -21,7 +24,7 @@ const FADE_MS = 400; // matches --p-duration-md
  * passant fades the pawn beside the destination and an ordinary capture fades
  * underneath the arriving piece. Local state — it never touches the 64 squares.
  */
-function Sprites({ pieces, orientation, draggingId }: PieceLayerProps) {
+function Sprites({ pieces, orientation, draggingId, selectedId, animate }: PieceLayerProps) {
   const [fading, setFading] = useState<PieceOnBoard[]>([]);
   const previous = useRef<readonly PieceOnBoard[]>(pieces);
 
@@ -53,7 +56,9 @@ function Sprites({ pieces, orientation, draggingId }: PieceLayerProps) {
             x={x}
             y={y}
             dragging={piece.id === draggingId}
+            selected={piece.id === selectedId}
             fading={false}
+            animate={animate}
           />
         );
       })}
@@ -69,7 +74,9 @@ function Sprites({ pieces, orientation, draggingId }: PieceLayerProps) {
               x={x}
               y={y}
               dragging={false}
+              selected={false}
               fading={true}
+              animate={animate}
             />
           );
         })}
