@@ -20,12 +20,18 @@ export function useBoardKeyboard(
   focusSquare: Square,
   orientation: Color,
   actions: GameActions,
+  /** True while the engine is thinking or the game is over. */
+  inert: boolean,
 ) {
   return useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       const file = fileIndex(focusSquare);
       const rank = rankIndex(focusSquare);
       const forward = orientation === 'w' ? 1 : -1;
+      // The visible corners swap with the orientation, so Ctrl+Home/End have to
+      // be derived rather than hard-coded — the same reason the arrows are.
+      const topLeft: Square = orientation === 'w' ? 'a8' : 'h1';
+      const bottomRight: Square = orientation === 'w' ? 'h1' : 'a8';
 
       let next: Square | null = null;
 
@@ -43,15 +49,23 @@ export function useBoardKeyboard(
           next = squareAt(clamp(file + forward), rank);
           break;
         case 'Home':
-          next = event.ctrlKey || event.metaKey ? 'a8' : squareAt(orientation === 'w' ? 0 : 7, rank);
+          next =
+            event.ctrlKey || event.metaKey ? topLeft : squareAt(orientation === 'w' ? 0 : 7, rank);
           break;
         case 'End':
-          next = event.ctrlKey || event.metaKey ? 'h1' : squareAt(orientation === 'w' ? 7 : 0, rank);
+          next =
+            event.ctrlKey || event.metaKey
+              ? bottomRight
+              : squareAt(orientation === 'w' ? 7 : 0, rank);
           break;
         case 'Enter':
         case ' ':
           event.preventDefault();
-          actions.activateSquare(focusSquare);
+          // The click and pointer paths both refuse to act while the board is
+          // inert; the keyboard has to refuse too, or Enter would move for the
+          // engine while it is still thinking. Navigation stays allowed, so a
+          // screen-reader user can still read the position.
+          if (!inert) actions.activateSquare(focusSquare);
           return;
         case 'Escape':
           event.preventDefault();
@@ -68,6 +82,6 @@ export function useBoardKeyboard(
         event.preventDefault();
       }
     },
-    [focusSquare, orientation, actions],
+    [focusSquare, orientation, actions, inert],
   );
 }

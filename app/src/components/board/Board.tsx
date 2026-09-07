@@ -66,7 +66,7 @@ export const Board = memo(function Board({ state, actions, locked }: BoardProps)
     isDraggable,
     dragging,
   );
-  const onKeyDown = useBoardKeyboard(focusSquare, orientation, actions);
+  const onKeyDown = useBoardKeyboard(focusSquare, orientation, actions, inert);
 
   const draggedPiece = dragging ? snapshot.occupancy[interaction.from] : undefined;
   const selectedPiece =

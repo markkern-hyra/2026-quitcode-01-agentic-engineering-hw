@@ -35,6 +35,11 @@ export function useEngine(onBestMove: (move: BestMove) => void) {
       if (message.id !== requestId.current) return;
 
       const finish = () => {
+        // Checked again, not just above: `finish` can be deferred by up to
+        // MIN_THINK_MS, and a take-back or a new game inside that window bumps
+        // requestId without being able to recall this timer. Without the second
+        // check the engine's answer lands on a position that no longer exists.
+        if (message.id !== requestId.current) return;
         setThinking(false);
         if (message.type === 'bestmove') callback.current(message);
       };

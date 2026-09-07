@@ -72,6 +72,7 @@ const ICONS = [
   'close',
   'check',
   'sidebar',
+  'list',
 ] as const;
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

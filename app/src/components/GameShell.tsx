@@ -1,7 +1,12 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { PCanvas, PDivider, PHeading } from '@porsche-design-system/components-react/ssr';
+import {
+  PButtonPure,
+  PCanvas,
+  PDivider,
+  PHeading,
+} from '@porsche-design-system/components-react/ssr';
 import { breakpointM } from '@porsche-design-system/components-react/styles';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useChessGame } from '@/hooks/useChessGame';
@@ -83,6 +88,19 @@ export function GameShell() {
       </div>
 
       <div slot="header-end" className={styles.headerEnd}>
+        {/* PCanvas toggles the start sidebar itself, but the end sidebar only
+            emits `onSidebarEndDismiss` — there is no built-in way to reopen it.
+            Without this control the move history is unreachable for good on any
+            viewport where it starts closed. */}
+        <PButtonPure
+          type="button"
+          icon="list"
+          hideLabel={true}
+          onClick={() => setEndOverride(!sidebarEndOpen)}
+          aria={{ 'aria-expanded': sidebarEndOpen }}
+        >
+          {sidebarEndOpen ? 'Hide move history' : 'Show move history'}
+        </PButtonPure>
         <ThemeToggle />
       </div>
 

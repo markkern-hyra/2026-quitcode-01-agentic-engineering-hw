@@ -27,6 +27,16 @@ const FADE_MS = 400; // matches --p-duration-md
 function Sprites({ pieces, orientation, draggingId, selectedId, animate }: PieceLayerProps) {
   const [fading, setFading] = useState<PieceOnBoard[]>([]);
   const previous = useRef<readonly PieceOnBoard[]>(pieces);
+  /**
+   * One timer per captured piece, keyed by id.
+   *
+   * A single shared timer cancelled by the effect's cleanup does not work here:
+   * the effect re-runs on every move, so a capture followed by another move
+   * inside FADE_MS cancelled the first piece's expiry and the replacement timer
+   * only knew about the second piece — leaving the first stuck in `fading` for
+   * the rest of the game.
+   */
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   useEffect(() => {
     const live = new Set(pieces.map((piece) => piece.id));
@@ -35,12 +45,26 @@ function Sprites({ pieces, orientation, draggingId, selectedId, animate }: Piece
     if (gone.length === 0) return;
 
     setFading((current) => [...current, ...gone]);
-    const timer = setTimeout(() => {
-      const goneIds = new Set(gone.map((piece) => piece.id));
-      setFading((current) => current.filter((piece) => !goneIds.has(piece.id)));
-    }, FADE_MS);
-    return () => clearTimeout(timer);
+    for (const piece of gone) {
+      clearTimeout(timers.current.get(piece.id));
+      timers.current.set(
+        piece.id,
+        setTimeout(() => {
+          timers.current.delete(piece.id);
+          setFading((current) => current.filter((item) => item.id !== piece.id));
+        }, FADE_MS),
+      );
+    }
   }, [pieces]);
+
+  // Only on unmount: every fade must be allowed to finish on its own.
+  useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      for (const timer of pending.values()) clearTimeout(timer);
+      pending.clear();
+    };
+  }, []);
 
   const liveIds = new Set(pieces.map((piece) => piece.id));
 
