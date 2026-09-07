@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:pages": "PAGES_BASE_PATH=/2026-quitcode-01-agentic-engineering-hw next build && touch out/.nojekyll"
   },
   "dependencies": {
     "@porsche-design-system/components-react": "4.6.0",
