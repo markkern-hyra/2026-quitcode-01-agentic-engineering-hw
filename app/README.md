@@ -4,10 +4,13 @@ A playable chess game — local two-player or against a bot at three difficulty
 levels — built with **Next.js 16 (App Router)** and the
 **[Porsche Design System v4](https://designsystem.porsche.com/v4/)**.
 
+**▶ Play it: https://markkern-hyra.github.io/2026-quitcode-01-agentic-engineering-hw/**
+
 ```bash
 npm install
-npm run dev     # http://localhost:3000
-npm run build   # must pass; see "The build is the test" below
+npm run dev          # http://localhost:3000
+npm run build        # must pass; see "The build is the test" below
+npm run build:pages  # static export for GitHub Pages (subpath baked in)
 ```
 
 Requires Node 20.9+ (developed on 22.20). No environment variables, no

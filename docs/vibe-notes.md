@@ -1,146 +1,157 @@
-# Vibe notes — Workshop 1
+# Нотатки вайб-сесії — Воркшоп 1
 
-**App:** Porsche Chess — a playable chess game (local two-player or a bot at
-three levels) on Next.js 16 + Porsche Design System v4.
-**Tool:** Claude Code (Opus 5, 1M context).
-**Branch:** `ws01/markkern-hyra` · **Code:** `app/`
+**Застосунок:** Porsche Chess — робочі шахи (двоє гравців локально або бот на
+трьох рівнях складності) на Next.js 16 + Porsche Design System v4.
+**Інструмент:** Claude Code (Opus 5, 1M контексту).
+**Гілка:** `ws01/markkern-hyra` · **Код:** `app/`
 
----
-
-## 1. What came out of the first prompt, and what did not
-
-**Worked essentially first time**
-
-- **The scaffold and the PDS wiring.** `create-next-app` → provider → partials →
-  global stylesheet → a rendering `PHeading`/`PButton`, with `npm run build`
-  green. Zero iterations.
-- **The chess core.** The mutable `Chess` instance in a ref, an immutable
-  `GameSnapshot` per move, and a per-ply identity map so pieces keep stable ids.
-  That last idea is what makes the slide animation free — castling moves two ids
-  in one snapshot and both pieces glide together with no extra code.
-- **The board's re-render contract.** 64 memoised buttons, hover in pure CSS,
-  drag coordinates deliberately kept out of React state. Never needed revisiting.
-- **The engine's shape.** Negamax + alpha-beta + transposition table + quiescence
-  was correct as written; only its *tuning* needed work (§2).
-
-**Did not work first time**
-
-- **The first piece set was unusable.** The knight rendered as a featureless
-  blob and the king read as a heart. Hand-authored SVG is fine as an idea, but
-  the first attempt at the paths was simply bad drawing. Redrawing all six around
-  a *shared base shape* is what made them read as one family.
-- **Three separate React 19 lint rejections** of the same underlying need — a
-  stable mutable container (§3).
-- **Four bugs that typecheck, lint and build all passed** (§2). This is the
-  headline finding.
+🔗 **Демо:** https://markkern-hyra.github.io/2026-quitcode-01-agentic-engineering-hw/
 
 ---
 
-## 2. Where the agent stumbled, and how it got turned round
+## 1. Що вийшло з першого промпту, а що ні
 
-Every bug that mattered was invisible to static checking. The prompt that
-actually moved things was some variant of **"now run it and look."**
+**Спрацювало практично одразу**
 
-| Bug | Why static checks missed it | How it was caught |
+- **Каркас і підключення дизайн-системи.** `create-next-app` → провайдер →
+  partials → глобальні стилі → сторінка з `PHeading`/`PButton`, і `npm run build`
+  зелений. Нуль ітерацій.
+- **Ядро шахів.** Мутабельний екземпляр `Chess` у ref, незмінний `GameSnapshot`
+  на кожен хід і мапа ідентичності фігур на кожен пів-хід. Саме останнє робить
+  анімацію безкоштовною: рокіровка змінює координати двох фігур в одному
+  снапшоті, і обидві їдуть одночасно без жодного додаткового коду.
+- **Контракт ре-рендерів дошки.** 64 мемоїзовані кнопки, ховер суто на CSS,
+  координати перетягування свідомо не потрапляють у стан React. Не довелося
+  переробляти жодного разу.
+- **Архітектура рушія.** Negamax + альфа-бета + таблиця транспозицій +
+  quiescence була правильною одразу; доопрацювання потребувало лише
+  *налаштування* (§2).
+
+**Не вийшло з першого разу**
+
+- **Перший набір фігур був непридатний.** Кінь виглядав як безформна пляма, а
+  король — як сердечко. Ідея намалювати SVG вручну правильна, але перша спроба
+  була просто поганим малюнком. Врятувало перемальовування всіх шести фігур
+  навколо **спільної основи** — саме це змусило їх читатися як одна родина.
+- **Три окремі відмови лінтера React 19** через одну й ту саму потребу —
+  стабільний мутабельний контейнер (§3).
+- **Чотири баги, які пройшли перевірку типів, лінт і збірку.** Це головний
+  висновок сесії.
+
+---
+
+## 2. Де агент спіткнувся і як його розвертали
+
+Кожен баг, який реально мав значення, був невидимий для статичних перевірок.
+Промпт, який справді зрушував справу з місця, звучав як **«а тепер запусти це і
+подивись»**.
+
+| Баг | Чому статичні перевірки його не побачили | Як знайшли |
 |---|---|---|
-| Search timeout left the board corrupted | The `TimeUp` exception unwinds between a `move()` and its `undo()`, so an aborted search abandoned the board 11 plies deep in a dead line. The next `move()` threw `Invalid move: Nc3`. Perfectly typed. | Bundling `src/engine` with esbuild and playing a **full self-play game in Node**. A single-move test would have passed. |
-| `setPointerCapture` silently killed click-to-move | Capture retargets the subsequent `click` to the capturing element, so the square's own `onClick` never fired. The board looked completely inert and threw **no errors at all**. | Driving the real page with Playwright: "selecting e2 shows 0 legal targets". |
-| Black pieces invisible in dark mode | PDS's contrast tokens are *translucent overlays*, so `--p-color-canvas` as the "light" square resolves to `#010205` and the black army had nothing to contrast against — it rendered as hollow outlines. | Looking at a dark-mode screenshot. |
-| Game-over banner laid out at 0×0 | It was in `PCanvas`'s `footer` slot with correct shadow content — present in the DOM, correct text, zero size. | Probing `getBoundingClientRect()` after noticing it wasn't in the screenshot. |
+| Тайм-аут пошуку залишав дошку зіпсованою | Виняток `TimeUp` розкручує стек між `move()` і парним `undo()`, тож перерваний пошук кидав дошку на 11 пів-ходів углиб покинутої лінії. Наступний `move()` падав з `Invalid move: Nc3`. Типи при цьому ідеальні. | Зібрав `src/engine` через esbuild і **зіграв повну партію сам із собою в Node**. Тест на один хід пройшов би успішно. |
+| `setPointerCapture` тихо вбив хід кліком | Захоплення вказівника перенаправляє наступний `click` на елемент, що захопив, тож власний `onClick` клітинки не спрацьовував ніколи. Дошка виглядала повністю мертвою і **не давала жодної помилки**. | Керування реальною сторінкою через Playwright: «після кліку на e2 показано 0 легальних ходів». |
+| Чорні фігури невидимі в темній темі | Контрастні токени PDS — це **напівпрозорі накладки**, тому `--p-color-canvas` як «світла» клітинка дає `#010205`, і чорному війську немає з чим контрастувати: воно рендерилось як порожні контури. | Просто подивився на скриншот у темній темі. |
+| Банер завершення гри мав розмір 0×0 | Він лежав у слоті `footer` компонента `PCanvas` з правильним вмістом: у DOM присутній, текст коректний, розмір нульовий. | Перевірка `getBoundingClientRect()` після того, як не побачив його на скриншоті. |
 
-Two smaller ones: the roving `tabindex` only followed *clicks*, so keyboard focus
-arriving by Tab left the anchor behind and the next arrow key stepped from a
-square the user had already left; and `getMetaTagsAndIconLinks({format:'js'})`
-returns `openGraph.image` (singular) where Next's `Metadata` type wants `images`.
+Ще два дрібніші: роумінговий `tabindex` слідував лише за *кліками*, тож фокус із
+клавіатури (Tab) залишав якір позаду і наступна стрілка крокувала з клітинки, яку
+користувач уже покинув; а `getMetaTagsAndIconLinks({format:'js'})` повертає
+`openGraph.image` (однина) там, де тип `Metadata` у Next чекає `images`.
 
-**Engine tuning.** The first version reached only depth 2 in a midgame position.
-Profiling `chess.js` directly settled where the time actually went:
+**Налаштування рушія.** Перша версія на середині партії дотягувалася лише до
+глибини 2. Профілювання самого `chess.js` показало, куди насправді йде час:
 
-| Call | ops/s | |
+| Виклик | оп/с | |
 |---|---|---|
-| `hash()` | 22,900,000 | free — safe to key a transposition table on |
-| `board()` | 1,860,000 | free |
-| `move()` + `undo()` | 19,000 | **the ceiling** |
-| `moves()` | 17,000 | **the ceiling** |
+| `hash()` | 22 900 000 | безкоштовно — можна сміливо робити ключем таблиці транспозицій |
+| `board()` | 1 860 000 | безкоштовно |
+| `move()` + `undo()` | 19 000 | **стеля** |
+| `moves()` | 17 000 | **стеля** |
 
-So ~10k nodes/s is the hard limit and no amount of cleverness in the evaluation
-would matter. Adding **delta pruning and a 6-ply quiescence cap** bought depth
-3–4. Difficulty levels are therefore defined by *time budget*, not fixed depth.
-Separately, ordering moves by reading the SAN string (`=` > `x` > `+`/`#` >
-quiet) costs nothing because `moves()` already produced those strings, and it cut
-a midgame depth-4 search from 37,625 nodes / 1,885 ms to **5,514 nodes / 396 ms**.
+Тобто ~10 тис. вузлів/с — це жорстка межа, і жодна кмітливість в оцінювальній
+функції її не зрушить. **Delta pruning плюс обмеження quiescence у 6 пів-ходів**
+дали глибину 3–4. Тому рівні складності визначаються *бюджетом часу*, а не
+фіксованою глибиною.
+
+Окремо: сортування ходів читанням рядка SAN (`=` > `x` > `+`/`#` > тихі ходи)
+не коштує нічого, бо `moves()` уже згенерував ці рядки, і скоротило пошук на
+глибину 4 з **37 625 вузлів / 1 885 мс до 5 514 вузлів / 396 мс**.
 
 ---
 
-## 3. Numbers
+## 3. Числа
 
-**Research paid for itself.** Before any code, three parallel agents read the
-*shipped* PDS 4.6.0 package rather than trusting the docs. That found
+**Дослідження окупилося.** До написання коду три паралельні агенти прочитали
+**реально опублікований** пакет PDS 4.6.0, а не документацію. Це виявило
 [#4684](https://github.com/porsche-design-system/porsche-design-system/issues/4684):
-PDS's `splitChildren` runs `typeof children === 'object' && 'type' in children`,
-and since `typeof null === 'object'`, **a bare `null` child throws during
-prerender** — in nearly every `P*` component, and *only* in `next build`, never
-in `next dev`. Knowing that up front made it a coding convention
-(`{cond && <X/>}`, plus a `pdsText()` helper) instead of a late mystery build
-failure. The half-empty last row of the move-history table would have hit it.
+`splitChildren` у PDS виконує `typeof children === 'object' && 'type' in children`,
+а оскільки `typeof null === 'object'`, **голий `null` серед дочірніх елементів
+кидає виняток під час пререндеру** — майже в кожному компоненті `P*`, і **лише**
+в `next build`, ніколи в `next dev`. Знання про це наперед перетворило проблему
+на угоду в коді (`{cond && <X/>}` плюс хелпер `pdsText()`) замість пізньої
+загадкової поламаної збірки. Напівпорожній останній рядок таблиці історії ходів
+влучив би просто в нього.
 
-The same pass killed four things the model would otherwise have written from
-stale memory: `theme` props (removed in v4 — theming is CSS `light-dark()`),
-`PFlex`/`PGrid` (removed), `getInitialStyles()` (removed), and the `settings`,
-`crown` and `undo` icons (they don't exist; `configurate`, `return`, `switch` do).
+Той самий прохід прибрав ще чотири речі, які модель написала б із застарілої
+пам'яті: проп `theme` (прибрано в v4 — тепер тема це CSS `light-dark()`),
+`PFlex`/`PGrid` (прибрано), `getInitialStyles()` (прибрано), а також іконки
+`settings`, `crown` і `undo` (їх не існує; є `configurate`, `return`, `switch`).
 
-**Delivered**
+**Зроблено**
 
 | | |
 |---|---|
-| Commits | 6, each with `npm run build` green |
-| Source | 3,290 lines across 46 files — engine 490, lib 482, hooks 755, components 1,257 |
-| Direct dependencies | **2** (`chess.js`, `@porsche-design-system/components-react`) |
-| Prod dependency tree | 96 packages |
-| Engine | ~490 lines, no chess-AI dependency, Web Worker |
-| Bot response | Easy ~0.7 s · Medium ~0.8 s · Hard ~1.7 s (measured in-browser) |
-| Piece artwork | 6 hand-authored SVG shapes, ~2 KB, no licensing question |
+| Комітів | 8, кожен із зеленим `npm run build` |
+| Код | 3 290 рядків у 46 файлах — рушій 490, lib 482, хуки 755, компоненти 1 257 |
+| Прямих залежностей | **2** (`chess.js`, `@porsche-design-system/components-react`) |
+| Дерево залежностей (prod) | 96 пакетів |
+| Рушій | ~490 рядків, без жодної шахової AI-залежності, у Web Worker |
+| Відповідь бота | Easy ~0,7 с · Medium ~0,8 с · Hard ~1,7 с (заміряно в браузері) |
+| Фігури | 6 намальованих вручну SVG, ~2 КБ, без жодних ліцензійних питань |
+| Статичний експорт | 1,1 МБ, розгорнуто на GitHub Pages |
 
-**Verification actually run** (not just asserted): castling both sides, en
-passant, promotion to a non-queen (`hxg8=N`), fool's mate with the live-region
-sentence "Checkmate. Black wins.", a full keyboard-only move, exactly one
-`tabindex="0"` at a time, arrows staying visually correct after a board flip,
-take-back mid-search dropping the stale engine reply, and 390 px with no
-horizontal overflow.
+**Що реально перевірено** (а не просто заявлено): рокіровка в обидва боки,
+взяття на проході, перетворення пішака у **не**-ферзя (`hxg8=N`), «дитячий мат»
+разом із фразою в live-регіоні «Checkmate. Black wins.», повний хід лише з
+клавіатури, рівно один `tabindex="0"` одночасно, коректний напрямок стрілок після
+перевороту дошки, скасування ходу під час роздумів рушія (застаріла відповідь
+відкидається), відсутність горизонтального переповнення на 390 px, і нарешті —
+**жодної помилки в консолі на живому сайті GitHub Pages**, включно із
+завантаженням Web Worker з підшляху.
 
-> **Session cost:** run `/cost` in Claude Code and paste the figure here.
-> I could not read it from inside the session, and inventing a number would
-> defeat the point of the exercise.
-
----
-
-## 4. Takeaways
-
-1. **The build is the test — and the browser is the real test.** Typecheck, lint
-   and `next build` were green while the board was completely unclickable and
-   the black army was invisible. Four of the six real bugs were only findable by
-   *running and looking*. "Write it, then look at it" should be the default loop,
-   not the last step.
-2. **Read the shipped package, not the docs.** Every v4 fact that mattered —
-   the removed `theme` prop, the missing icons, the `null`-child crash — came
-   from the actual `.d.ts` and `.mjs` files on npm. The model's memory of this
-   library was confidently wrong, and the docs site is version-fuzzy.
-3. **Profile before optimising, even in a "small" component.** The instinct was
-   to make the evaluation function cleverer. Measurement showed `hash()` at 23M
-   ops/s and `moves()` at 17k — the ceiling was entirely in move generation, so
-   the fix was pruning search *volume*, not improving the eval.
-4. **Next time: get it on screen sooner.** The whole board, engine and panel
-   layer were written before anything was rendered in a browser. Half a day's
-   worth of bugs sat undetected in green builds. A screenshot after the first
-   64 squares would have caught the pointer-capture bug immediately.
+> **Вартість сесії:** виконайте `/cost` у Claude Code і вставте число сюди.
+> Я не маю доступу до нього зсередини сесії, а вигадане число знецінило б увесь
+> сенс цієї вправи.
 
 ---
 
-## Task 2 checklist, for the reviewer
+## 4. Спостереження
 
-Input controls (`PSegmentedControl` for opponent/difficulty/side, `PSwitch` for
-board options) → state in a `useReducer` → data display (`PTable` move history,
-captured-piece tray, `PTag` status). UI chrome is PDS components throughout;
-the board itself is deliberately our own CSS and SVG built on PDS's `--p-*`
-custom properties, so the game stays playable even if the CDN-loaded components
-never upgrade.
+1. **Збірка — це тест, але справжній тест — браузер.** Перевірка типів, лінт і
+   `next build` були зеленими тоді, коли дошка взагалі не реагувала на кліки, а
+   чорні фігури були невидимі. Чотири з шести реальних багів можна було знайти
+   **лише запустивши й подивившись**. «Напиши, потім подивись» має бути циклом
+   за замовчуванням, а не останнім кроком.
+2. **Читайте опублікований пакет, а не документацію.** Кожен важливий факт про
+   v4 — прибраний проп `theme`, відсутні іконки, падіння на `null` — знайшовся у
+   реальних файлах `.d.ts` і `.mjs` на npm. Пам'ять моделі про цю бібліотеку була
+   впевнено помилковою, а сайт документації розмитий щодо версій.
+3. **Профілюйте перед оптимізацією, навіть у «маленькому» компоненті.** Інстинкт
+   підказував ускладнити оцінювальну функцію. Заміри показали `hash()` на 23 млн
+   оп/с і `moves()` на 17 тис. — уся стеля була в генерації ходів, тож правильним
+   рішенням було різати *обсяг* пошуку, а не покращувати оцінку.
+4. **Наступного разу — на екран раніше.** Дошка, рушій і всі панелі були написані
+   до того, як щось узагалі відрендерилось у браузері. Півдня багів спокійно
+   сиділи в зелених збірках. Скриншот одразу після перших 64 клітинок спіймав би
+   баг із захопленням вказівника миттєво.
+
+---
+
+## Чек-ліст Task 2 — для рев'ювера
+
+Елементи вводу (`PSegmentedControl` для суперника / складності / сторони,
+`PSwitch` для налаштувань дошки) → стан у `useReducer` → відображення даних
+(`PTable` з історією ходів, лоток збитих фігур, статус у `PTag`). Обрамлення
+інтерфейсу — компоненти PDS; сама дошка свідомо зроблена власним CSS і SVG на
+кастомних властивостях PDS (`--p-*`), щоб у гру можна було грати навіть тоді,
+коли жоден компонент із CDN не проініціалізується.
